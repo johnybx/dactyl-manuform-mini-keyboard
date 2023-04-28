@@ -3,7 +3,11 @@
   (:require [clojure.core.matrix :refer [array matrix mmul]]
             [scad-clj.scad :refer :all]
             [scad-clj.model :refer :all]
-            [unicode-math.core :refer :all]))
+            ; [unicode-math.core :refer :all]
+            [scad-tarmi.core :refer [π]]
+            [scad-tarmi.dfm :as dfm]
+            [scad-klupe.base :as base]
+            [scad-klupe.iso :refer [nut, rod]]))
 
 (defn deg2rad [degrees]
   (* (/ degrees 180) pi))
@@ -15,26 +19,26 @@
 (def nrows 4)
 (def ncols 6)
 
-(def α (/ π 12))                        ; curvature of the columns
+(def α (/ π 10))                        ; curvature of the columns
 (def β (/ π 36))                        ; curvature of the rows
 (def centerrow (- nrows 3))             ; controls front-back tilt
 (def centercol 2)                       ; controls left-right tilt / tenting (higher number is more tenting)
-(def tenting-angle (/ π 12))            ; or, change this for more precise tenting control
+(def tenting-angle (/ π 9))            ; or, change this for more precise tenting control
 (def column-style
   (if (> nrows 5) :orthographic :standard))  ; options include :standard, :orthographic, and :fixed
 ; (def column-style :fixed)
 (def pinky-15u false)
 
-(def thumb-count :three)                ; could also be :five
+(def thumb-count :five)                ; could also be :five
 
 (defn column-offset [column] (cond
                                (= column 2) [0 2.82 -4.5]
                                (>= column 4) [0 -12 5.64]            ; original [0 -5.8 5.64]
                                :else [0 0 0]))
 
-(def thumb-offsets [6 -3 7])
+(def thumb-offsets [-3 -3 5])
 
-(def keyboard-z-offset 9)               ; controls overall height; original=9 with centercol=3; use 16 for centercol=2
+(def keyboard-z-offset 12)               ; controls overall height; original=9 with centercol=3; use 16 for centercol=2
 
 (def extra-width 2.5)                   ; extra space between the base of keys; original= 2
 (def extra-height 1.0)                  ; original= 0.5
@@ -57,6 +61,9 @@
 ; If you use other switches such as Kailh, you should set this as false
 (def create-side-nubs? false)
 
+; This adds ton of elements which means that live preview in openscad is almost impossible.
+; It is better to disable this for development.
+(def add_m3_rods_for_pcb true)
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;; General variables ;;
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -253,7 +260,7 @@
 ;; Web Connectors ;;
 ;;;;;;;;;;;;;;;;;;;;
 
-(def web-thickness 3)
+(def web-thickness 4.4) ; increased for amoeba king 1.3 
 (def post-size 0.1)
 (def web-post (->> (cube post-size post-size web-thickness)
                    (translate [0 0 (+ (/ web-thickness -2)
@@ -322,42 +329,40 @@
 
 (defn thumb-tr-place [shape]
   (->> shape
-       (rotate (deg2rad  14) [1 0 0])
-       (rotate (deg2rad -15) [0 1 0])
-       (rotate (deg2rad  10) [0 0 1]) ; original 10
+       (rotate (deg2rad  11) [1 0 0])
+       (rotate (deg2rad  -19) [0 1 0])
+       (rotate (deg2rad  16) [0 0 1]) ; original 10
        (translate thumborigin)
-       (translate [-15 -10 5]))) ; original 1.5u  (translate [-12 -16 3])
+       (translate [-17 -8.5 5]))) ; original 1.5u  (translate [-12 -16 3])
 (defn thumb-tl-place [shape]
   (->> shape
-       (rotate (deg2rad  10) [1 0 0])
-       (rotate (deg2rad -23) [0 1 0])
+       (rotate (deg2rad  7) [1 0 0])
+       (rotate (deg2rad -25) [0 1 0])
        (rotate (deg2rad  25) [0 0 1]) ; original 10
        (translate thumborigin)
-       (translate [-35 -16 -2]))) ; original 1.5u (translate [-32 -15 -2])))
-
+       (translate [-35 -15 -2]))) ; original 1.5u (translate [-32 -15 -2])))
 
 (defn thumb-mr-place [shape]
   (->> shape
-       (rotate (deg2rad  10) [1 0 0])
-       (rotate (deg2rad -23) [0 1 0])
+       (rotate (deg2rad  11) [1 0 0])
+       (rotate (deg2rad -26) [0 1 0])
        (rotate (deg2rad  25) [0 0 1])
        (translate thumborigin)
-       (translate [-23 -34 -6])))
+       (translate [-24 -32 -10])))
 (defn thumb-br-place [shape]
   (->> shape
-       (rotate (deg2rad   6) [1 0 0])
-       (rotate (deg2rad -34) [0 1 0])
+       (rotate (deg2rad   7) [1 0 0])
+       (rotate (deg2rad -11) [0 1 0])
        (rotate (deg2rad  35) [0 0 1])
        (translate thumborigin)
-       (translate [-39 -43 -16])))
+       (translate [-42.2 -43 -17])))
 (defn thumb-bl-place [shape]
   (->> shape
-       (rotate (deg2rad   6) [1 0 0])
-       (rotate (deg2rad -32) [0 1 0])
+       (rotate (deg2rad   8) [1 0 0])
+       (rotate (deg2rad -11) [0 1 0])
        (rotate (deg2rad  35) [0 0 1])
        (translate thumborigin)
-       (translate [-51 -25 -11.5]))) ;        (translate [-51 -25 -12])))
-
+       (translate [-54 -25 -9.5]))) ;        (translate [-51 -25 -12])))
 
 (defn thumb-1x-layout [shape]
   (union
@@ -634,7 +639,7 @@
 
 (def usb-jack (translate (map + usb-holder-position [0 10 4]) (cube 12.1 20 6)))
 
-(def pro-micro-position (map + (key-position 0 1 (wall-locate3 -1 0)) [-6 2 -15]))
+(def pro-micro-position (map + (key-position 0 1 (wall-locate3 -1 0)) [-4 16 -15]))
 (def pro-micro-space-size [4 10 12]) ; z has no wall;
 (def pro-micro-wall-thickness 2)
 (def pro-micro-holder-size [(+ pro-micro-wall-thickness (first pro-micro-space-size)) (+ pro-micro-wall-thickness (second pro-micro-space-size)) (last pro-micro-space-size)])
@@ -662,7 +667,7 @@
 
   ; circle trrs hole
    (->>
-    (->> (binding [*fn* 30] (cylinder 3.25 20))) ; 5mm trrs jack
+    (->> (binding [*fn* 30] (cylinder (/ 7.85 2) 20)))
     (rotate (deg2rad  90) [1 0 0])
     (translate [(first trrs-holder-position) (+ (second trrs-holder-position) (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2)) (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))])) ;1.5 padding
 
@@ -674,12 +679,40 @@
 
   ; circle trrs hole
    (->>
-    (->> (binding [*fn* 30] (cylinder 4.75 4))) 
+    (->> (binding [*fn* 30] (cylinder (/ 9.86 2) 4)))
     (rotate (deg2rad  90) [1 0 0])
     (translate [(first trrs-holder-insert-position) (+ (second trrs-holder-insert-position) (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2)) (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))])) ;1.5 padding
 
   ; rectangular trrs holder
    (->> (apply cube trrs-holder-hole-size) (translate [(first trrs-holder-position) (+ (/ trrs-holder-thickness -2) (second trrs-holder-position)) (+ (/ (last trrs-holder-hole-size) 2) trrs-holder-thickness)]))))
+
+(def reset-button-body-size [6.01 6.01 3])  ; cube body of button 
+(def reset-button-body-depth 1.51)  ; cut out from wall 
+(def reset-button-insert-hole-radius (/ 2 2)) ; outer hole radius
+(def reset-button-insert-hole-depth 1.5) ; outer hole radius
+(def reset-button-radius (/ 3.5 2)) ; button radius
+(def reset-button-height 1.55) ; button radius
+(def reset-button-position  (map + trrs-holder-position [0 (+ 4 reset-button-body-depth) 14]))
+(def reset-button
+  (union
+   (->> (apply cube reset-button-body-size)
+        (rotate (deg2rad  90) [1 0 0])
+        (translate reset-button-position))))
+
+(def reset-button-hole
+  (union
+   (->>
+    (->> (binding [*fn* 30] (cylinder reset-button-radius reset-button-height)))
+    (rotate (deg2rad  90) [1 0 0])
+    (translate [(first reset-button-position) (+ (second reset-button-position) (/ (last reset-button-body-size) 2) (/ reset-button-height 2)) (last reset-button-position)]))))
+
+(def reset-button-hole-insert
+  (union
+   (->>
+    (->> (binding [*fn* 30] (cylinder reset-button-insert-hole-radius reset-button-insert-hole-depth)))
+    (rotate (deg2rad  90) [1 0 0])
+    ; (translate [0 (last reset-button-body-size) 0])
+    (translate [(first reset-button-position) (+ (second reset-button-position) (/ (last reset-button-body-size) 2) reset-button-height (/ reset-button-insert-hole-depth 2)) (last reset-button-position)]))))
 
 (defn screw-insert-shape [bottom-radius top-radius height]
   (union
@@ -700,16 +733,16 @@
          (translate (map + offset [(first position) (second position) (/ height 2)])))))
 
 (defn screw-insert-all-shapes [bottom-radius top-radius height]
-  (union (screw-insert 0 0         bottom-radius top-radius height [11 10 0])
-         (screw-insert 0 lastrow   bottom-radius top-radius height [0 0 0])
+  (union (screw-insert 0 0         bottom-radius top-radius height [6 5 0])
+         (screw-insert 0 lastrow   bottom-radius top-radius height [-12 1 0])
          ;(screw-insert lastcol lastrow  bottom-radius top-radius height [-5 13 0])
          ;(screw-insert lastcol 0         bottom-radius top-radius height [-3 6 0])
-         (screw-insert lastcol lastrow  bottom-radius top-radius height [-5 12 0])
+         (screw-insert lastcol lastrow  bottom-radius top-radius height [-3 15 0])
          (screw-insert lastcol 0         bottom-radius top-radius height [-3 9 0])
-         (screw-insert 1 lastrow         bottom-radius top-radius height [0 -16 0])))
+         (screw-insert 1 lastrow         bottom-radius top-radius height [-12 -15 0])))
 
 ; Hole Depth Y: 4.4
-(def screw-insert-height 4)
+(def screw-insert-height 3)
 
 ; Hole Diameter C: 4.1-4.4
 (def screw-insert-bottom-radius (/ 4.4 2))
@@ -744,34 +777,105 @@
    (key-wall-brace lastcol cornerrow 0 -1 web-post-br lastcol cornerrow 0 -1 wide-post-br)
    (key-wall-brace lastcol 0 0 1 web-post-tr lastcol 0 0 1 wide-post-tr)))
 
+(def m3-rod
+  (rod {:m-diameter 3 :length 5 :compensator (dfm/error-fn) :taper-fn base/flare :negative true}))
+(def m3-rod-x-offset 1.3)
+(def m3-rod-y-offset 1.4)
+(def m3-rod-z-offset 0)
+(def m3-rod-z-thumb-offset -1.4)
+(defn place-m3-rod [column row]
+  (key-place column row
+             (union
+              (translate [(+ (/ mount-width 2) (if (and (= row 0) (= column lastcol)) (- m3-rod-x-offset (/ mount-width 2)) (- m3-rod-x-offset)))
+                          (+ (/ mount-width 2) m3-rod-y-offset)
+                          (if (= row 0) (- m3-rod-z-offset 1.5) m3-rod-z-offset)] m3-rod)
+              (translate [(+ (- (/ mount-width 2)) (if (= column 0) (if (= row (- lastrow 1)) (- mount-width m3-rod-x-offset -3) (+ 1.5 m3-rod-x-offset)) m3-rod-x-offset))
+                          (+ (- (/ mount-width 2)) (if (and (= column 0) (= row (- lastrow 1)))  m3-rod-y-offset  (- m3-rod-y-offset)))
+                          (if (= row lastrow) (- m3-rod-z-offset 1.5) (if (and (= row (- lastrow 1)) (or (= column 4) (= column 5) (= column 0))) (- m3-rod-z-offset 2.2)  m3-rod-z-offset))] m3-rod))))
+
+(def m3-rods
+  (apply union
+         (for [column columns
+               row rows
+               :when (or (.contains [2 3] column)
+                         (not= row lastrow))]
+           (->>
+            (place-m3-rod column row)))))
+
+(def m3-rods-thumb
+  (union
+   (thumb-bl-place
+    (union
+     (translate [(+ (/ mount-width 2) (- m3-rod-x-offset))
+                 (+ (/ mount-width 2) m3-rod-y-offset)
+                 m3-rod-z-thumb-offset] m3-rod)
+     (translate [(+ (- (/ mount-width 2)) m3-rod-x-offset)
+                 (+ (- (/ mount-width 2)) (- m3-rod-y-offset))
+                 (- m3-rod-z-thumb-offset 1)] m3-rod)))
+   (thumb-br-place
+    (union
+     (translate [(+ (/ mount-width 2)  m3-rod-x-offset)
+                 (+ (/ mount-width 2) (- m3-rod-y-offset))
+                 m3-rod-z-thumb-offset] m3-rod)
+     (translate [(+ (- (/ mount-width 2)) m3-rod-x-offset)
+                 (+ (- (/ mount-width 2)) (- m3-rod-y-offset))
+                 m3-rod-z-thumb-offset] m3-rod)))
+   (thumb-mr-place
+    (union
+     (translate [(+ (/ mount-width 2) m3-rod-x-offset)
+                 (+ (/ mount-width 2) (- m3-rod-y-offset))
+                 m3-rod-z-thumb-offset] m3-rod)
+     (translate [(+ (- (/ mount-width 2)) m3-rod-x-offset)
+                 (+ (- (/ mount-width 2)) (- m3-rod-y-offset))
+                 m3-rod-z-thumb-offset] m3-rod)))
+   (thumb-tl-place
+    (union
+     (translate [(+ (/ mount-width 2) (- m3-rod-x-offset))
+                 (+ (/ mount-width 2) m3-rod-y-offset)
+                 (+ m3-rod-z-thumb-offset 1.5)] m3-rod)
+     (translate [(+ (- (/ mount-width 2)) m3-rod-x-offset)
+                 (+ (- (/ mount-width 2)) (- m3-rod-y-offset))
+                 (- m3-rod-z-thumb-offset 2.5)] m3-rod)))
+   (thumb-tr-place
+    (union
+     (translate [(+ (/ mount-width 2) (- m3-rod-x-offset))
+                 (+ (- (/ mount-width 2)) (- m3-rod-y-offset))
+                 m3-rod-z-thumb-offset] m3-rod)
+     (translate [(+ (- (/ mount-width 2)) m3-rod-x-offset -2)
+                 (+ (/ mount-width 2) -1.5)
+                 m3-rod-z-thumb-offset] m3-rod)))))
+
 (def model-right (difference
-                  (union
-                   key-holes
-                   pinky-connectors
-                   pinky-walls
-                   connectors
-                   thumb
-                   thumb-connectors
-                   (difference (union case-walls
-                                      screw-insert-outers
-                                      pro-micro-holder
-                                      #_usb-holder-holder
-                                      #_trrs-holder)
-                               usb-holder-space
-                               usb-jack
-                               trrs-holder-hole
-                               trrs-holder-hole-insert
-                               screw-insert-holes))
+                  (difference (union
+                               connectors
+                               key-holes
+                               pinky-connectors
+                               pinky-walls
+                               thumb
+                               thumb-connectors
+                               (difference (union case-walls
+                                                  screw-insert-outers
+                                                  pro-micro-holder
+                                                  #_usb-holder-holder
+                                                  #_trrs-holder)
+                                           usb-holder-space
+                                           usb-jack
+                                           trrs-holder-hole
+                                           trrs-holder-hole-insert
+                                           reset-button
+                                           reset-button-hole
+                                           reset-button-hole-insert
+                                           screw-insert-holes))
+
+                              (if (true? add_m3_rods_for_pcb) (with-fn 100 (union m3-rods m3-rods-thumb))))
                   (translate [0 0 -20] (cube 350 350 40))))
 
 (spit "things/right.scad"
       (write-scad model-right))
 
-#_
 (spit "things/left.scad"
       (write-scad (mirror [-1 0 0] model-right)))
 
-#_
 (spit "things/right-test.scad"
       (write-scad
        (difference
@@ -788,19 +892,36 @@
 
         (translate [0 0 -20] (cube 350 350 40)))))
 
-#_
-(spit "things/right-plate.scad"
-      (write-scad
-       (cut
-        (translate [0 0 -0.1]
-                   (difference (union case-walls
-                                      pinky-walls
-                                      screw-insert-outers)
-                               (translate [0 0 -10] screw-insert-screw-holes))))))
+(def right-transparent-stripe
+  (extrude-linear {:height 2}
+                  (cut
+                   (translate [0 0 -1]
+                              (difference (union case-walls
+                                                 pinky-walls
+                                                 screw-insert-outers)
+                                          (translate [0 0 -10] screw-insert-screw-holes))))))
+(spit "things/right-transparent-stripe.scad"
+      (write-scad right-transparent-stripe))
 
-#_
-(spit "things/test.scad"
-      (write-scad
-       (difference trrs-holder trrs-holder-hole)))
+(spit "things/left-transparent-stripe.scad"
+      (write-scad (mirror [-1 0 0] right-transparent-stripe)))
+
+(def right-plate
+  (extrude-linear {:height 1}
+                  (cut
+                   (translate [0 0 -1]
+                              (difference (union case-walls
+                                                 pinky-walls
+                                                 screw-insert-outers)
+                                          (translate [0 0 -10] screw-insert-screw-holes))))))
+
+(spit "things/right-plate.scad"
+      (write-scad right-plate))
+
+(spit "things/left-plate.scad"
+      (write-scad (mirror [-1 0 0] right-plate)))
+#_(spit "things/test.scad"
+        (write-scad
+         (difference trrs-holder trrs-holder-hole)))
 
 (defn -main [dum] 1)  ; dummy to make it easier to batch
