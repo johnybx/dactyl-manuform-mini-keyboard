@@ -7,7 +7,7 @@
             [scad-tarmi.core :refer [π]]
             [scad-tarmi.dfm :as dfm]
             [scad-klupe.base :as base]
-            [scad-klupe.iso :refer [nut, rod]]))
+            [scad-klupe.iso :refer [nut, rod, bolt]]))
 
 (defn deg2rad [degrees]
   (* (/ degrees 180) pi))
@@ -417,7 +417,7 @@
    (triangle-hulls
     (thumb-mr-place web-post-tr)
     (thumb-mr-place web-post-br)
-    (thumb-tr-place thumb-post-br))
+    (thumb-tr-place thumb-post-bl))
    (case thumb-count    ; between top row and bottom row
      :three (triangle-hulls
              (thumb-tr-place web-post-br)
@@ -437,26 +437,37 @@
             (thumb-mr-place web-post-tr)
             (thumb-tl-place web-post-br)
             (thumb-tr-place web-post-bl)
-            (thumb-mr-place web-post-tr)
-            (thumb-tr-place web-post-br)))
+            (thumb-tr-place web-post-bl)
+            (thumb-tr-place web-post-br)
+            (thumb-mr-place web-post-br)
+            ))
    (case thumb-count
      :five (triangle-hulls    ; top two to the middle two, starting on the left
             (thumb-tl-place web-post-tl)
             (thumb-bl-place web-post-tr)
             (thumb-tl-place web-post-bl)
             (thumb-bl-place web-post-br)
-            (thumb-mr-place web-post-tr)
-            (thumb-tl-place web-post-bl)
-            (thumb-tl-place web-post-br)
-            (thumb-mr-place web-post-tr))
+            )
      ())
-   (triangle-hulls    ; top two to the main keyboard, starting on the left
-    (thumb-tl-place web-post-tl)
-    (key-place 0 cornerrow web-post-bl)
-    (thumb-tl-place web-post-tr)
+    ; top two to the main keyboard, starting on the left
+   (triangle-hulls
     (key-place 0 cornerrow web-post-br)
+    (key-place 1 cornerrow web-post-br)
+    (thumb-tr-place thumb-post-tr)
+   )
+   (triangle-hulls
+    (thumb-tl-place web-post-tl)
+    (thumb-tl-place web-post-tr)
+    (key-place 0 cornerrow web-post-bl)
     (thumb-tr-place thumb-post-tl)
+    (thumb-tr-place thumb-post-tr)
+    (key-place 0 cornerrow web-post-bl)
+    (key-place 0 cornerrow web-post-br)
     (key-place 1 cornerrow web-post-bl)
+    (key-place 1 cornerrow web-post-br)
+   ;  (thumb-tr-place thumb-post-tr)
+     )
+   (triangle-hulls
     (thumb-tr-place thumb-post-tr)
     (key-place 1 cornerrow web-post-br)
     (key-place 2 lastrow web-post-tl)
@@ -667,7 +678,7 @@
 
   ; circle trrs hole
    (->>
-    (->> (binding [*fn* 30] (cylinder (/ 7.85 2) 20)))
+    (->> (binding [*fn* 30] (cylinder (/ 7.95 2) 20)))
     (rotate (deg2rad  90) [1 0 0])
     (translate [(first trrs-holder-position) (+ (second trrs-holder-position) (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2)) (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))])) ;1.5 padding
 
@@ -679,7 +690,7 @@
 
   ; circle trrs hole
    (->>
-    (->> (binding [*fn* 30] (cylinder (/ 9.86 2) 4)))
+    (->> (binding [*fn* 30] (cylinder (/ 10.00 2) 4)))
     (rotate (deg2rad  90) [1 0 0])
     (translate [(first trrs-holder-insert-position) (+ (second trrs-holder-insert-position) (/ (+ (second trrs-holder-size) trrs-holder-thickness) 2)) (+ 3 (/ (+ (last trrs-holder-size) trrs-holder-thickness) 2))])) ;1.5 padding
 
@@ -924,4 +935,48 @@
         (write-scad
          (difference trrs-holder trrs-holder-hole)))
 
-(defn -main [dum] 1)  ; dummy to make it easier to batch
+
+(def m3-rod
+  (rod {:m-diameter 4 :length 50 :compensator (dfm/error-fn) :taper-fn base/flare :negative true}))
+; Test models 
+(def cube-with-nut
+  (difference
+  (cube  50 50 20)
+  (union 
+    m3-rod
+    (translate [0 10 0] m3-rod)
+    (translate [0 -10 0] m3-rod)
+    (translate [10 0 0] m3-rod)
+    (translate [-10 0  0] m3-rod)
+    )
+  )
+  )
+
+; (spit "things/cube-with-m4-nut.scad"
+;       (write-scad cube-with-nut))
+;
+; (spit "things/bolt-5.scad"
+;         (write-scad (bolt {:m-diameter 4, :head-type :hex :head-length 5})))
+;
+; (defn  write-bolt [size]
+;   (spit (format "things/bolt-m4-%s.scad" size)
+;         (write-scad (bolt {:m-diameter 4 :total-length size :head-type :hex :drive-type :hex :compensator (dfm/error-fn) :taper-fn base/flare})))
+; )
+(defn  write-bolt [size]
+  (spit (format "things/bolt-m3-%s.scad" size)
+        (write-scad (bolt {:m-diameter 3 :head-type :hex :drive-type :hex :head-length 3 :unthreaded-length 0 :threaded-length size  :compensator (dfm/error-fn) :taper-fn base/flare})))
+)
+;
+; (defn  write-nut [size]
+;   (spit (format "things/nut-m4-%s.scad" size)
+;         (write-scad (nut {:m-diameter 4 :height size :compensator (dfm/error-fn) :taper-fn base/flare})))
+; )
+; (spit "things/nut-m4-default.scad"
+;       (write-scad (nut {:m-diameter 4 :compensator (dfm/error-fn) :taper-fn base/flare})))
+; (spit "things/nut-m4-default-negative.scad"
+;       (write-scad (nut {:m-diameter 4 :compensator (dfm/error-fn) :taper-fn base/flare :negative true})))
+;
+; ;[5 10 15 20 50]
+; (defn -main [dum] (doall (map write-bolt [5 6 7 8 9 10 12 15 20 50])))  ; dummy to make it easier to batch
+; (apply -main [1])
+(defn -main [dum] 1)
