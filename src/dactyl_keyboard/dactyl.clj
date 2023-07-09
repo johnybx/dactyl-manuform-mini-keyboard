@@ -648,7 +648,9 @@
 (def usb-holder-space  (translate (map + usb-holder-position [0 (* -1 wall-thickness) 1]) usb-holder-cube))
 (def usb-holder-holder (translate usb-holder-position (cube 19 12 4)))
 
-(def usb-jack (translate (map + usb-holder-position [0 10 4]) (cube 12.1 20 6)))
+(def radius 2.4 )
+(def usb-jack (translate (map + usb-holder-position [0 10 4]) (binding [*fn* 50] (minkowski (sphere radius) (cube (- 10.1 (* 2 radius)) (- 20 (* 2 radius)) (- 6 (* 2 radius)))))))
+; (def usb-jack (translate (map + usb-holder-position [0 10 4]) (cube 10.1 20 6) ))
 
 (def pro-micro-position (map + (key-position 0 1 (wall-locate3 -1 0)) [-3.0 21 -15]))
 (def pro-micro-space-size [4 10 12]) ; z has no wall;

@@ -10,6 +10,7 @@ Here is the list of features which have been added after the fork from the [Dact
 - updated web thickness in order to support [amoeba king v1.3 pcb](https://github.com/climent/keyboard-pcbs/tree/king_v1.3/amoeba-king)
 - added m3 rods for pcb attachment
 - use five thumb keys by default
+- elipse like usb jack insert hole
 
 ## Getting the case and bottom plate
 
